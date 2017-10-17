@@ -18,18 +18,18 @@ import (
 )
 
 type SetCommand struct {
-	CredentialIdentifier string `short:"n" required:"yes" long:"name" description:"Name of the credential to set"`
-	Type                 string `short:"t" long:"type" description:"Sets the credential type. Valid types include 'value', 'json', 'password', 'user', 'certificate', 'ssh' and 'rsa'."`
-	NoOverwrite          bool   `short:"O" long:"no-overwrite" description:"Credential is not modified if stored value already exists"`
-	Value                string `short:"v" long:"value" description:"[Value, JSON] Sets the value for the credential"`
-	CaName               string `short:"m" long:"ca-name" description:"[Certificate] Sets the root CA to a stored CA credential"`
-	Root                 string `short:"r" long:"root" description:"[Certificate] Sets the root CA from file or value"`
-	Certificate          string `short:"c" long:"certificate" description:"[Certificate] Sets the certificate from file or value"`
-	Private              string `short:"p" long:"private" description:"[Certificate, SSH, RSA] Sets the private key from file or value"`
-	Public               string `short:"u" long:"public" description:"[SSH, RSA] Sets the public key from file or value"`
-	Username             string `short:"z" long:"username" description:"[User] Sets the username value of the credential"`
-	Password             string `short:"w" long:"password" description:"[Password, User] Sets the password value of the credential"`
-	OutputJson           bool   `          long:"output-json" description:"Return response in JSON format"`
+	CredentialIdentifier string  `short:"n" required:"yes" long:"name" description:"Name of the credential to set"`
+	Type                 string  `short:"t" long:"type" description:"Sets the credential type. Valid types include 'value', 'json', 'password', 'user', 'certificate', 'ssh' and 'rsa'."`
+	NoOverwrite          bool    `short:"O" long:"no-overwrite" description:"Credential is not modified if stored value already exists"`
+	Value                string  `short:"v" long:"value" description:"[Value, JSON] Sets the value for the credential"`
+	CaName               string  `short:"m" long:"ca-name" description:"[Certificate] Sets the root CA to a stored CA credential"`
+	Root                 *string `short:"r" long:"root" description:"[Certificate] Sets the root CA from file or value"`
+	Certificate          *string `short:"c" long:"certificate" description:"[Certificate] Sets the certificate from file or value"`
+	Private              *string `short:"p" long:"private" description:"[Certificate, SSH, RSA] Sets the private key from file or value"`
+	Public               *string `short:"u" long:"public" description:"[SSH, RSA] Sets the public key from file or value"`
+	Username             string  `short:"z" long:"username" description:"[User] Sets the username value of the credential"`
+	Password             string  `short:"w" long:"password" description:"[Password, User] Sets the password value of the credential"`
+	OutputJson           bool    `          long:"output-json" description:"Return response in JSON format"`
 }
 
 func (cmd SetCommand) Execute([]string) error {
@@ -74,26 +74,39 @@ func (cmd *SetCommand) setFieldsFromInteractiveUserInput() {
 }
 
 func (cmd *SetCommand) setFieldsFromFileOrString() error {
-	var err error
-
-	cmd.Public, err = util.ReadFileOrStringFromField(cmd.Public)
-	if err != nil {
-		return err
+	if cmd.Public != nil {
+		public, err := util.ReadFileOrStringFromField(*cmd.Public)
+		if err != nil {
+			return err
+		}
+		cmd.Public = &public
 	}
 
-	cmd.Private, err = util.ReadFileOrStringFromField(cmd.Private)
-	if err != nil {
-		return err
+	if cmd.Private != nil {
+		private, err := util.ReadFileOrStringFromField(*cmd.Private)
+		if err != nil {
+			return err
+		}
+		cmd.Private = &private
 	}
 
-	cmd.Root, err = util.ReadFileOrStringFromField(cmd.Root)
-	if err != nil {
-		return err
+	if cmd.Root != nil {
+		root, err := util.ReadFileOrStringFromField(*cmd.Root)
+		if err != nil {
+			return err
+		}
+		cmd.Root = &root
 	}
 
-	cmd.Certificate, err = util.ReadFileOrStringFromField(cmd.Certificate)
+	if cmd.Certificate != nil {
+		certificate, err := util.ReadFileOrStringFromField(*cmd.Certificate)
+		if err != nil {
+			return err
+		}
+		cmd.Certificate = &certificate
+	}
 
-	return err
+	return nil
 }
 
 func (cmd SetCommand) setCredential(credhubClient *credhub.CredHub) (interface{}, error) {
@@ -108,21 +121,21 @@ func (cmd SetCommand) setCredential(credhubClient *credhub.CredHub) (interface{}
 		return credhubClient.SetPassword(cmd.CredentialIdentifier, values.Password(cmd.Password), mode)
 	case "certificate":
 		value := values.Certificate{
-			Ca: cmd.Root,
+			Ca:          cmd.Root,
 			Certificate: cmd.Certificate,
-			PrivateKey: cmd.Private,
-			CaName: cmd.CaName,
+			PrivateKey:  cmd.Private,
+			CaName:      cmd.CaName,
 		}
 		return credhubClient.SetCertificate(cmd.CredentialIdentifier, value, mode)
 	case "ssh":
 		value := values.SSH{
-			PublicKey: cmd.Public,
+			PublicKey:  cmd.Public,
 			PrivateKey: cmd.Private,
 		}
 		return credhubClient.SetSSH(cmd.CredentialIdentifier, value, mode)
 	case "rsa":
 		value := values.RSA{
-			PublicKey: cmd.Public,
+			PublicKey:  cmd.Public,
 			PrivateKey: cmd.Private,
 		}
 		return credhubClient.SetRSA(cmd.CredentialIdentifier, value, mode)

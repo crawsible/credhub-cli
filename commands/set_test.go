@@ -493,6 +493,60 @@ var _ = Describe("Set", func() {
 			Eventually(session.Out).Should(Say("private_key: my-priv"))
 		})
 
+		It("displays null when ca value is missing", func() {
+			certificateValueJson := `{"ca": null, "certificate":"my-cert","private_key":"my-priv"}`
+			jsonRequest := `{"type":"certificate","name":"my-secret","value":` + certificateValueJson +  `,"overwrite":true}`
+			jsonResponse := `{"type":"certificate","id":"` + UUID + `","name":"my-secret","version_created_at":"` + TIMESTAMP + `","value":` + certificateValueJson + `}`
+			server.AppendHandlers(
+				CombineHandlers(
+					VerifyRequest("PUT", "/api/v1/data"),
+					VerifyJSON(jsonRequest),
+					RespondWith(http.StatusOK, jsonResponse),
+				),
+			)
+
+			session := runCommand("set",
+				"-n", "my-secret",
+				"-t", "certificate",
+				"--certificate", "my-cert",
+				"--private", "my-priv")
+
+			Eventually(session).Should(Exit(0))
+			Eventually(session.Out).Should(Say("name: my-secret"))
+			Eventually(session.Out).Should(Say("type: certificate"))
+			Eventually(session.Out).Should(Say("value:"))
+			Eventually(session.Out).Should(Say("ca: null"))
+			Eventually(session.Out).Should(Say("certificate: my-cert"))
+			Eventually(session.Out).Should(Say("private_key: my-priv"))
+		})
+
+		FIt("displays null when certificate value is missing", func() {
+			certificateValueJson := `{"ca":"my-ca", "certificate":null,"private_key":"my-priv"}`
+			jsonRequest := `{"type":"certificate","name":"my-secret","value":` + certificateValueJson +  `,"overwrite":true}`
+			jsonResponse := `{"type":"certificate","id":"` + UUID + `","name":"my-secret","version_created_at":"` + TIMESTAMP + `","value":` + certificateValueJson + `}`
+			server.AppendHandlers(
+				CombineHandlers(
+					VerifyRequest("PUT", "/api/v1/data"),
+					VerifyJSON(jsonRequest),
+					RespondWith(http.StatusOK, jsonResponse),
+				),
+			)
+
+			session := runCommand("set",
+				"-n", "my-secret",
+				"-t", "certificate",
+				"--root", "my-ca",
+				"--private", "my-priv")
+
+			Eventually(session).Should(Exit(0))
+			Eventually(session.Out).Should(Say("name: my-secret"))
+			Eventually(session.Out).Should(Say("type: certificate"))
+			Eventually(session.Out).Should(Say("value:"))
+			Eventually(session.Out).Should(Say("ca: my-ca"))
+			Eventually(session.Out).Should(Say("certificate: null"))
+			Eventually(session.Out).Should(Say("private_key: my-priv"))
+		})
+
 		It("handles newline characters", func() {
 			SetupPutCertificateServer("my-secret", `my\nca`, `my\ncert`, `my\npriv`)
 			session := runCommand("set", "-n", "my-secret",
