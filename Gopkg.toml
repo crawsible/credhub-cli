@@ -44,3 +44,7 @@
 [[constraint]]
   branch = "v2"
   name = "gopkg.in/yaml.v2"
+
+[[override]]
+  name = "github.com/cloudfoundry/socks5-proxy"
+  revision = "4c5a6f4a4516f42756f84f04cc5b523f471c9387"

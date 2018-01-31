@@ -5,6 +5,8 @@ import (
 	"crypto/x509"
 	"net/http"
 	"time"
+
+	"github.com/cloudfoundry/bosh-utils/httpclient"
 )
 
 // Client provides an unauthenticated http.Client to the CredHub server
@@ -31,22 +33,9 @@ func httpClient() *http.Client {
 }
 
 func httpsClient(insecureSkipVerify bool, rootCAs *x509.CertPool, cert *tls.Certificate) *http.Client {
-	client := httpClient()
-
-	certs := []tls.Certificate{}
-	if cert != nil {
-		certs = []tls.Certificate{*cert}
+	if insecureSkipVerify {
+		return httpclient.CreateDefaultClientInsecureSkipVerify()
 	}
 
-	client.Transport = &http.Transport{
-		TLSClientConfig: &tls.Config{
-			InsecureSkipVerify:       insecureSkipVerify,
-			PreferServerCipherSuites: true,
-			Certificates:             certs,
-			RootCAs:                  rootCAs,
-		},
-		Proxy: http.ProxyFromEnvironment,
-	}
-
-	return client
+	return httpclient.CreateDefaultClient(rootCAs)
 }
